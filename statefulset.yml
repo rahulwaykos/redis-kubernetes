@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cluster
+spec:
+  selector:
+    matchLabels:
+      app: redis-cluster
+  serviceName: redis-cluster
+  replicas: 6
+  template:
+    metadata:
+      labels:
+        app: redis-cluster
+      
+       
+    spec:
+      terminationGracePeriodSeconds: 10
+      
+      #hostNetwork: true
+      containers:
+      - name: redis-container
+        image: redis:5.0.1-alpine
+        ports:
+        - containerPort: 6379
+          name: client
+        - containerPort: 16379
+          name: gossip
+        command: ["/conf/update-node.sh", "redis-server", "/conf/redis.conf"]
+        # Ensure that Redis is online before initializing the next node.
+        # TODO: Test that the cluster node is init'd properly.
+       
+        # Mark a node as down if Redis server stops running
+       
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: conf
+          mountPath: /conf
+          readOnly: false
+        - name: data
+          mountPath: /data
+          readOnly: false
+      volumes:
+      # Insert our pre-baked Redis configuration file into /conf/redis.conf
+      - name: conf
+        configMap:
+          name: redis-cluster-configmap
+          mode: 0755
+          
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
