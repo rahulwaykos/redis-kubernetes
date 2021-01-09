@@ -49,7 +49,7 @@ spec:
       - name: conf
         configMap:
           name: redis-cluster-configmap
-          mode: 0755
+          defaulMode: 0755
           
   volumeClaimTemplates:
   - metadata:
